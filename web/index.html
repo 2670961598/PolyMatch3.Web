@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#1e1f26" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="PolyMatch3" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<link rel="icon" href="./icon-192.png" />
+<title>PolyMatch3 · WASM 试玩</title>
+<style>
+  :root { --cell: 44px; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; margin: 0; background: #1e1f26; color: #e8e8ea; }
+  .wrap { display: flex; gap: 24px; padding: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .panel { background: #2a2c36; border-radius: 10px; padding: 16px; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  label { font-size: 13px; color: #9aa0ad; }
+  input, textarea, button, select { font: inherit; border-radius: 6px; border: 1px solid #454958; background: #1e1f26; color: #e8e8ea; padding: 5px 8px; }
+  input { width: 64px; }
+  input.wide { width: 120px; }
+  textarea { width: 100%; height: 90px; font-family: Consolas, monospace; font-size: 12px; }
+  button { background: #4f6ef7; border: none; cursor: pointer; padding: 6px 14px; }
+  button:hover { background: #6684ff; }
+  button:disabled { background: #454958; cursor: not-allowed; }
+  #board { display: grid; gap: 4px; background: #14151a; padding: 8px; border-radius: 10px; user-select: none; width: fit-content; position: relative; }
+  .flyer { position: absolute; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: rgba(0,0,0,.45); font-size: 15px; z-index: 5; pointer-events: none; transition: transform .26s cubic-bezier(.5,.05,.8,.4); }
+  .flyer.spawn { transition: transform .3s cubic-bezier(.3,.7,.4,1.15); }
+  .cell { width: var(--cell); height: var(--cell); border-radius: 8px; cursor: pointer; transition: transform .12s, opacity .2s; display: flex; align-items: center; justify-content: center; font-weight: bold; color: rgba(0,0,0,.45); font-size: 15px; }
+  .cell.empty { background: #23242c; cursor: default; }
+  .cell.selected { transform: scale(1.12); filter: brightness(1.45); z-index: 3; }
+  .cell.match { filter: brightness(1.75) saturate(1.5); transform: scale(1.08); z-index: 2; }
+  /* 大棋盘虚拟渲染：滚动容器 + 绝对定位内层，只实例化可见格 */
+  #board.virtual { display: block; overflow: auto; max-width: 78vw; max-height: 68vh; padding: 0; }
+  .board-inner { position: relative; }
+  .board-inner .cell { position: absolute; border-radius: 3px; font-size: 0; }
+  .cell.vanish { opacity: 0; transform: scale(.1); transition: opacity .28s, transform .28s; }
+  .cell.pop { animation: pop .4s ease-out; }
+  @keyframes pop { 0% { transform: scale(.1); opacity: .2; } 70% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+  #status { font-size: 13px; margin-top: 10px; color: #8fd18f; }
+  #status.busy { color: #f0b35e; }
+  #score { font-size: 22px; font-weight: bold; color: #ffd166; }
+  #log { width: 340px; height: 480px; overflow-y: auto; font-family: Consolas, monospace; font-size: 11.5px; background: #14151a; border-radius: 8px; padding: 8px; white-space: pre-wrap; }
+  .ev-swap { color: #7ec8ff; } .ev-match { color: #c792ea; } .ev-elim { color: #ff7b72; }
+  .ev-fall { color: #8fd18f; } .ev-spawn { color: #ffd166; } .ev-err { color: #ff5252; } .ev-log { color: #9aa0ad; } .ev-perf { color: #6ee7ff; } .ev-bomb { color: #ff9f45; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <div class="panel" style="margin-bottom:16px; width: 460px;">
+      <h1>PolyMatch3 · Web (WASM)</h1>
+      <div class="row">
+        <label>模式</label><select id="mode">
+          <option value="0">矩形</option>
+          <option value="1">三角形</option>
+          <option value="2">六边形</option>
+        </select>
+        <label>宽</label><input id="w" type="number" value="8" min="3" max="200" />
+        <label>高</label><input id="h" type="number" value="8" min="3" max="200" />
+        <label>颜色数</label><input id="colors" type="number" value="6" min="2" max="9" />
+        <label>种子</label><input id="seed" class="wide" type="text" value="42" />
+        <label style="display:flex;align-items:center;gap:4px"><input id="bombs" type="checkbox" style="width:auto" />传统三消（特殊棋子）</label>
+        <button id="btnRandom">随机开局</button>
+      </div>
+      <div class="row"><label style="width:100%">指定棋盘（逗号/空格分隔，0=空，行优先，长度=宽×高）：</label></div>
+      <div class="row"><textarea id="pieces" placeholder="例如 64 个数字：1,2,3,..."></textarea></div>
+      <div class="row"><button id="btnCustom">指定棋盘开局</button></div>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <span>得分 <span id="score">0</span></span>
+        <span id="wasmStatus" style="font-size:12px;color:#9aa0ad">WASM 加载中…</span>
+      </div>
+      <div id="perf" style="font-size:12px;color:#6ee7ff;min-height:16px;font-family:Consolas,monospace"></div>
+      <div id="board"></div>
+      <div id="status">…</div>
+    </div>
+  </div>
+  <div class="panel">
+    <h1>事件流</h1>
+    <div id="log"></div>
+  </div>
+</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

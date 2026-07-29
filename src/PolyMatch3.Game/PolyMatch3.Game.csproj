@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\\PolyMatch3\\PolyMatch3.csproj" />
+    <ProjectReference Include="..\\PolyMatch3.Tools\\PolyMatch3.Tools.csproj" />
+    <ProjectReference Include="..\\PolyMatch3.Samples\\PolyMatch3.Samples.csproj" />
+  </ItemGroup>
+
+</Project>

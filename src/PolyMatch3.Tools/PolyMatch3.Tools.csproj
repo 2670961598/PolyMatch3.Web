@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>PolyMatch3.Tools</RootNamespace>
+    <Description>常用玩法工具（交换/消除/重力/填充/基准测试）——不属于框架，随取随用</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PolyMatch3\PolyMatch3.csproj" />
+  </ItemGroup>
+
+</Project>

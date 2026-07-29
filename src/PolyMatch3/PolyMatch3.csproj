@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>PolyMatch3</RootNamespace>
+    <Description>通用三消逻辑框架（从 Unity 工程复制，纯 C# 零 Unity 依赖）</Description>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,9 @@
+{
+  "appId": "com.demo.polymatch3",
+  "appName": "PolyMatch3",
+  "webDir": "../src/PolyMatch3.Bridge/bin/Release/net9.0/browser-wasm/AppBundle",
+  "backgroundColor": "#1e1f26",
+  "android": {
+    "allowMixedContent": true
+  }
+}

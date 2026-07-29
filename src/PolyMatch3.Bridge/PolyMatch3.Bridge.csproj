@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- 框架匹配器的串行特判符号（对框架库单独编译不生效，GameSession 已显式 parallel:false 兜底） -->
+    <DefineConstants>$(DefineConstants);BROWSER_WASM</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PolyMatch3.Game\PolyMatch3.Game.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\web\index.html" Link="index.html" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\web\main.js" Link="main.js" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- 注意：index.html / main.js 不会自动进 AppBundle，发布后需手动拷入（见根目录 publish-web.ps1） -->
+
+</Project>
