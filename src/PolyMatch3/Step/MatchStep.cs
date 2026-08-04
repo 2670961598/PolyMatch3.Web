@@ -5,25 +5,23 @@ using PolyMatch3.Matcher;
 namespace PolyMatch3.Step
 {
     /// <summary>
-    /// 全图匹配（Step 层的最底层能力 Step）：结果（MatchGroup 列表）写入黑板。
-    /// 仲裁是可选参数：arbitrate=true 时经 MatchArbitrator 去重压制（高级吃低级）；
-    /// false 时直接给原始全量组——消哪些、怎么消由玩法自己决定。
-    /// Success = 是否存在存活匹配（供编排层决定消除还是结束）。
+    /// 全图匹配（Step 层的最底层能力 Step）：把匹配器**原始输出（未去重的全量组）**写入黑板，不发事件。
+    /// 去重/仲裁不在本 Step 内做——需要时在其后接 ArbitrateStep（可串多个、各用各的 IMatchArbiter、
+    /// 各写各的黑板键，例如消除用一组策略、生成物用另一组策略）。
+    /// Success = 是否存在匹配（供编排层决定进入结算还是结束）。
     /// </summary>
     public sealed class MatchStep : IStep
     {
         public const string DefaultKey = "matches";
 
         private readonly IMatcher _matcher;
-        private readonly bool _arbitrate;
         private readonly string _resultKey;
 
-        public MatchStep(IMatcher matcher, bool arbitrate = true, string resultKey = DefaultKey)
+        public MatchStep(IMatcher matcher, string resultKey = DefaultKey)
         {
             _matcher = matcher ?? throw new System.ArgumentNullException(nameof(matcher));
             if (string.IsNullOrEmpty(resultKey))
-                throw new System.ArgumentException("resultKey 不能为空：匹配结果会写入黑板该键，空键会让后续 EliminateStep 永远读不到结果（静默空转）", nameof(resultKey));
-            _arbitrate = arbitrate;
+                throw new System.ArgumentException("resultKey 不能为空：匹配结果会写入黑板该键，空键会让后续 Step 永远读不到结果（静默空转）", nameof(resultKey));
             _resultKey = resultKey;
         }
 
@@ -33,14 +31,8 @@ namespace PolyMatch3.Step
         public Task<StepResult> ExecuteAsync(GraphBoard board, StepContext ctx)
         {
             var raw = _matcher.Match(board);
-            var groups = _arbitrate ? MatchArbitrator.Arbitrate(raw, board.CellCount) : raw;
-
-            ctx.Info.Set(_resultKey, groups);
-
-            var result = new StepResult { Success = groups.Count > 0 };
-            foreach (var g in groups)
-                result.Events.Add(new MatchEvent(g));
-            return Task.FromResult(result);
+            ctx.Info.Set(_resultKey, raw);
+            return Task.FromResult(new StepResult { Success = raw.Count > 0 });
         }
     }
 }

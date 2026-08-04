@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using PolyMatch3.Core;
 using PolyMatch3.Matcher;
 using PolyMatch3.Samples;
@@ -12,8 +12,8 @@ namespace PolyMatch3.Game
     /// 【导读】经典三消主循环（最简状态机），本类是玩法侧的"大脑"，回答每一步之后该干什么。
     ///
     /// 状态机流转（_lastIssued 记录上一次派发的 Step）：
-    ///   PlayerSwap ──交换成功──▶ Match ──┬─有匹配──▶ [BombSpawn（仅炸弹模式）] ─▶ Eliminate ─▶ Gravity ─▶ Refill ─▶ Match（连锁判定）
-    ///       ▲                            └─无匹配──┬─交换后首次判定：SwapBack（弹回）─▶ PlayerSwap
+    ///   PlayerSwap ──交换成功──▶ Match ─▶ Arbitrate（覆盖去重）─┬─有存活──▶ [BombSpawn（仅炸弹模式）] ─▶ Eliminate ─▶ Gravity ─▶ Refill ─▶ Match（连锁判定）
+    ///       ▲                            └─无存活──┬─交换后首次判定：SwapBack（弹回）─▶ PlayerSwap
     ///       └──────────────────────────────────────┴─连锁后判定：直接回 PlayerSwap
     ///
     /// 关键设计：
@@ -27,6 +27,7 @@ namespace PolyMatch3.Game
     {
         private readonly PlayerSwapStep _playerSwap;
         private readonly MatchStep _match;
+        private readonly ArbitrateStep _arbitrate;
         private readonly IStep _bombSpawn;   // 可空：仅炸弹模式
         private readonly EliminateStep _eliminate;
         private readonly PathGravityStep _gravity;
@@ -41,6 +42,7 @@ namespace PolyMatch3.Game
         {
             _playerSwap = new PlayerSwapStep(input, kinds);
             _match = new MatchStep(matcher);
+            _arbitrate = new ArbitrateStep(MatchArbiters.Containment);
             _refill = new RefillStep(colorCount, pieces);
             _kinds = kinds;
 
@@ -82,6 +84,11 @@ namespace PolyMatch3.Game
                         _lastIssued = "Match";
                         break;
                     case "Match":
+                        // 匹配后固定接仲裁（覆盖去重），存活组才是后续生成/消除的依据
+                        d = StepDecision.Next(_arbitrate);
+                        _lastIssued = "Arbitrate";
+                        break;
+                    case "Arbitrate":
                         if (last.Success)
                         {
                             if (_bombSpawn != null)

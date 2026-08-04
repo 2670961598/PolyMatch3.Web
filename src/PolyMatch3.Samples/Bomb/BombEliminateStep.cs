@@ -8,22 +8,24 @@ namespace PolyMatch3.Samples.Bomb
 {
     /// <summary>
     /// 炸弹消除：在 EliminateStep 骨架上重载两个接缝——
-    /// ① 消除集：匹配并集 − 待生成锚点，然后对每个炸弹格做半径展开，展开命中其他炸弹则连锁（迭代到不动点）；
+    /// ① 消除集：匹配并集 − 待生成锚点，然后对每个炸弹格做范围展开（注入的 ICellSelector），
+    ///    展开命中其他炸弹则连锁（迭代到不动点）；
     /// ② 清完后：把锚点格落到 kind 层（颜色层保留——四连留下的那个子就是炸弹）。
     /// 展开集合是闭包（与处理顺序无关），队列按首次命中序，完全确定。
     /// </summary>
     public sealed class BombEliminateStep : EliminateStep
     {
         private readonly KindLayer _kinds;
-        private readonly int _radius;
+        private readonly ICellSelector _range;
 
         /// <param name="kinds">kind 平行数组（判定谁是炸弹、清除时同步归普通）。</param>
-        /// <param name="radius">爆炸半径（切比雪夫距离，1 = 3×3，假设矩形棋盘）。</param>
-        public BombEliminateStep(KindLayer kinds, int radius = 1, string sourceKey = MatchStep.DefaultKey, PieceRegistry pieces = null)
+        /// <param name="range">爆炸范围选择器（默认 RectSquareSelector(1) = 矩形 3×3）。
+        /// 换爆炸形状（十字/整行/任意拓扑范围）只换这个参数，不改本类。</param>
+        public BombEliminateStep(KindLayer kinds, ICellSelector range = null, string sourceKey = MatchStep.DefaultKey, PieceRegistry pieces = null)
             : base(sourceKey, pieces)
         {
             _kinds = kinds;
-            _radius = radius;
+            _range = range ?? new RectSquareSelector(1);
         }
 
         protected override List<int> CollectCells(GraphBoard board, List<MatchGroup> groups, StepContext ctx)
@@ -41,7 +43,7 @@ namespace PolyMatch3.Samples.Bomb
                 if (!anchors.Contains(c)) seeds.Add(c);
             }
 
-            // 爆炸展开：闭包迭代（炸弹格 → 半径内非空格 → 命中的炸弹再展开）
+            // 爆炸展开：闭包迭代（炸弹格 → 选择器范围内非空格 → 命中的炸弹再展开）
             var result = new HashSet<int>(seeds);
             var queue = new List<int>(seeds);
             for (int qi = 0; qi < queue.Count; qi++)
@@ -49,7 +51,7 @@ namespace PolyMatch3.Samples.Bomb
                 int c = queue[qi];
                 if (_kinds.Get(c) == KindLayer.Normal) continue;
 
-                foreach (var n in RadiusCells(board, c))
+                foreach (var n in _range.Select(board, c))
                 {
                     if (board.GetPieceType(n) == PieceRegistry.EmptyId) continue;
                     if (result.Add(n)) queue.Add(n);
@@ -74,23 +76,6 @@ namespace PolyMatch3.Samples.Bomb
             {
                 foreach (var a in anchors) _kinds.Set(a, KindLayer.Bomb3x3);
                 ctx.Info.Remove(BombSpawnOnMatchStep.SpawnKey);
-            }
-        }
-
-        /// <summary>矩形棋盘切比雪夫半径内的格子（越界裁剪）。</summary>
-        private IEnumerable<int> RadiusCells(GraphBoard board, int center)
-        {
-            int w = board.Width;
-            int cx = center % w, cy = center / w;
-            for (int dy = -_radius; dy <= _radius; dy++)
-            {
-                for (int dx = -_radius; dx <= _radius; dx++)
-                {
-                    if (dx == 0 && dy == 0) continue;
-                    int x = cx + dx, y = cy + dy;
-                    if (x < 0 || x >= w || y < 0 || y >= board.Height) continue;
-                    yield return y * w + x;
-                }
             }
         }
     }

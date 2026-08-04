@@ -47,4 +47,41 @@ namespace PolyMatch3.Tools
             PieceTypes = pieceTypes;
         }
     }
+
+    /// <summary>洗牌事件（CellIds = 被重排的格子，前端整批刷新即可）。</summary>
+    public sealed class ShuffleEvent : GameEvent
+    {
+        public ShuffleEvent(int[] cellIds)
+        {
+            Type = "Shuffle";
+            CellIds = cellIds;
+        }
+    }
+
+    /// <summary>
+    /// 计分事件（每步消除至多一个）：Delta = 本次得分，Total = 累计总分；
+    /// Sources 与 Deltas 一一对应（修饰符应用顺序的分明细，前端只挑关键源展示）。
+    /// </summary>
+    public sealed class ScoreEvent : GameEvent
+    {
+        public readonly int Delta;
+        public readonly int Total;
+        public readonly string[] Sources;
+        public readonly int[] Deltas;
+
+        public ScoreEvent(int delta, int total, System.Collections.Generic.List<(string source, int delta)> contributions)
+        {
+            Type = "Score";
+            Delta = delta;
+            Total = total;
+            CellIds = new int[0];
+            Sources = new string[contributions.Count];
+            Deltas = new int[contributions.Count];
+            for (int i = 0; i < contributions.Count; i++)
+            {
+                Sources[i] = contributions[i].source;
+                Deltas[i] = contributions[i].delta;
+            }
+        }
+    }
 }

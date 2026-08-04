@@ -18,6 +18,9 @@ namespace PolyMatch3.Tools
         /// <summary>累计消除数的黑板键。</summary>
         public const string EliminatedTotalKey = "eliminatedTotal";
 
+        /// <summary>本次消除格子列表的黑板键（ScoreStep 等结算工具的输入）。</summary>
+        public const string LastCellsKey = "lastEliminated";
+
         private readonly string _sourceKey;
         private readonly PieceRegistry _pieces; // 可选：提供时 OnCellCleared 默认分发 IPieceHooks
 
@@ -56,6 +59,9 @@ namespace PolyMatch3.Tools
             // 累计消除数（玩法目标系统可直接读）
             ctx.Info.TryGet<int>(EliminatedTotalKey, out var total);
             ctx.Info.Set(EliminatedTotalKey, total + cells.Count);
+
+            // 本次消除列表（结算管道的输入）
+            ctx.Info.Set(LastCellsKey, cells);
 
             return Task.FromResult(new StepResult
             {

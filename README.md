@@ -26,7 +26,10 @@ src/PolyMatch3/          【框架】Core（棋盘/边类型/棋子注册表/确
                                  Logging / Diagnostics（配置校验）
                          原则：只处理匹配相关 + 编排契约，无任何玩法工具
 src/PolyMatch3.Tools/    【工具】常用玩法零件，不属于框架：Swap/Eliminate/Gravity/Refill、
-                         棋盘填充（BoardInitializer）、开局约束、匹配基准测试
+                         棋盘填充（BoardInitializer）、开局约束、匹配基准测试、
+                         生成物裁决（SpawnTable 映射 + ISpawnResolver 策略）、
+                         结算管道（ScoreStep + 修饰符/触发器）、计数/死局检测/洗牌、
+                         势场重力（FieldGravityStep）、行动配额（BeginTurn/SpendAp）、Hint/AI 策略
 src/PolyMatch3.Game/     【业务层示例】经典矩形/三角/六边三消
                          BoardModes           三种棋盘模式的拓扑+图案配置
                          ClassicStepManager   主循环状态机（等输入→交换→匹配→消除→重力→补充→连锁）
@@ -43,9 +46,9 @@ app/                     Capacitor 安卓离线壳（资源内置 APK）：build
 - **棋子 = 纯逻辑、无状态**：棋盘上的 int（**0=空，硬约定**，`PieceRegistry.EmptyId`），
   注册表 `PieceRegistry` 按注册顺序分配 id（1..N），`IPiece` 只有身份；
   回调钩子（生成/消除）在 Step 层 `IPieceHooks`，由编排/工具层按格 id 升序调度。
-- **匹配与仲裁独立**：`FixedPatternMatcher.Match()` 返回原始全量组；
-  `MatchArbitrator.Arbitrate()` 是可选后处理（`MatchStep(matcher, arbitrate: false)` 可跳过），
-  消哪些、怎么消由玩法决定。
+- **匹配与仲裁独立**：`MatchStep` 只输出原始全量组（不仲裁、不发事件）；去重由 `ArbitrateStep`
+  以可插拔的 `IMatchArbiter` 完成——内置 `none`（不去重）/ `containment`（覆盖去重）/ `overlap`
+  （交叉去重），注册表按 Id 解析，自定义仲裁器可注册。消哪些、怎么消由玩法决定。
 
 ## 构建与运行
 

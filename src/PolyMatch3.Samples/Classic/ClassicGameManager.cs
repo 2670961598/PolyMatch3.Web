@@ -11,7 +11,7 @@ namespace PolyMatch3.Samples.Classic
     ///   输入 → 按两格 kind 分支：
     ///     含宝石 → GemInteract → 结算链
     ///     双特殊 → SpecialInteract → 结算链
-    ///     其余 → 普通交换 → 匹配（无匹配弹回）→ SpecialSpawn → 结算链
+    ///   其余 → 普通交换 → 匹配 → 仲裁（无存活匹配且是交换则弹回）→ SpecialSpawn → 结算链
     ///   结算链 = SpecialEliminate → 重力（kind 同步）→ 补充 → 匹配（连锁）→ 无连锁回输入。
     /// 初始状态不做匹配检测，直接等输入；永不主动结束。
     /// </summary>
@@ -19,6 +19,7 @@ namespace PolyMatch3.Samples.Classic
     {
         private readonly SwapInputStep _input;
         private readonly MatchStep _match;
+        private readonly ArbitrateStep _arbitrate;
         private readonly SpecialSpawnStep _spawn;
         private readonly SpecialEliminateStep _eliminate;
         private readonly PathGravityStep _gravity;
@@ -34,7 +35,11 @@ namespace PolyMatch3.Samples.Classic
             _kinds = kinds;
             _input = new SwapInputStep(input);
             _match = new MatchStep(matcher);
-            _spawn = new SpecialSpawnStep();
+            _arbitrate = new ArbitrateStep(MatchArbiters.Containment);
+            // 开局校验：映射表与本局图案集/生成物注册对不上时，当场抛（不带进局内）
+            var spawnTable = ClassicSetup.CreateSpawnTable();
+            spawnTable.Validate(ClassicSetup.CreatePatterns(), ClassicSetup.IsSpawnId);
+            _spawn = new SpecialSpawnStep(spawnTable);
             _eliminate = new SpecialEliminateStep(kinds, pieces: pieces);
             _gravity = new KindGravityStep(kinds, width * height, PathGravityStep.BuildColumnEdges(width, height));
             _refill = new RefillStep(colorCount, pieces);
@@ -64,6 +69,11 @@ namespace PolyMatch3.Samples.Classic
                         _lastIssued = "Match";
                         break;
                     case "Match":
+                        // 匹配后固定接仲裁（覆盖去重），存活组才是后续生成/消除的依据
+                        d = StepDecision.Next(_arbitrate);
+                        _lastIssued = "Arbitrate";
+                        break;
+                    case "Arbitrate":
                         if (last.Success)
                         {
                             d = StepDecision.Next(_spawn);

@@ -153,5 +153,18 @@ namespace PolyMatch3.Core
 
         /// <summary>CSR 邻居表只读视图（全部邻居紧凑排列，同槽位保持加入顺序）。</summary>
         public ReadOnlySpan<int> Neighbors => _neighbors;
+
+        /// <summary>
+        /// 指定 (格, 边类型) 槽的邻居只读视图（热路径，区域选择器/重力等沿边行走工具的入口）。
+        /// 依赖 CSR 布局，拓扑未冻结即抛（与匹配器的冻结检查同一纪律）。
+        /// </summary>
+        public ReadOnlySpan<int> NeighborsOf(int cellId, int edgeIndex)
+        {
+            if (!IsTopologyFrozen)
+                throw new InvalidOperationException("拓扑未冻结：NeighborsOf 依赖 CSR 布局，FreezeTopology 之后才可读取");
+            int slot = cellId * EdgeTypeCount + edgeIndex;
+            int begin = _neighborOffsets[slot];
+            return _neighbors.AsSpan(begin, _neighborOffsets[slot + 1] - begin);
+        }
     }
 }
