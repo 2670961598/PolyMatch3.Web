@@ -30,16 +30,17 @@ namespace PolyMatch3.Samples.Classic
         private bool _matchAfterSwap;
 
         public ClassicGameManager(InputChannel<(int a, int b)> input, IMatcher matcher, int colorCount,
-            int width, int height, KindLayer kinds, PieceRegistry pieces = null)
+            int width, int height, KindLayer kinds, PieceRegistry pieces = null,
+            IMatchArbiter arbiter = null, ISpawnResolver resolver = null)
         {
             _kinds = kinds;
             _input = new SwapInputStep(input);
             _match = new MatchStep(matcher);
-            _arbitrate = new ArbitrateStep(MatchArbiters.Containment);
+            _arbitrate = new ArbitrateStep(arbiter ?? MatchArbiters.Containment);
             // 开局校验：映射表与本局图案集/生成物注册对不上时，当场抛（不带进局内）
             var spawnTable = ClassicSetup.CreateSpawnTable();
             spawnTable.Validate(ClassicSetup.CreatePatterns(), ClassicSetup.IsSpawnId);
-            _spawn = new SpecialSpawnStep(spawnTable);
+            _spawn = new SpecialSpawnStep(spawnTable, resolver);
             _eliminate = new SpecialEliminateStep(kinds, pieces: pieces);
             _gravity = new KindGravityStep(kinds, width * height, PathGravityStep.BuildColumnEdges(width, height));
             _refill = new RefillStep(colorCount, pieces);

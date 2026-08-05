@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using PolyMatch3.Samples.Bomb;
 using PolyMatch3.Samples.Classic;
 using PolyMatch3.Step;
@@ -42,9 +42,26 @@ namespace PolyMatch3.Game
                 case TransformEvent t:
                     sb.Append(",\"kind\":").Append(t.Kind);
                     break;
+                case ScoreEvent sc:
+                    sb.Append(",\"delta\":").Append(sc.Delta)
+                      .Append(",\"total\":").Append(sc.Total);
+                    AppendStrings(sb, "sources", sc.Sources);
+                    AppendInts(sb, "deltas", sc.Deltas);
+                    break;
             }
 
             return sb.Append('}').ToString();
+        }
+
+        private static void AppendStrings(StringBuilder sb, string name, string[] values)
+        {
+            sb.Append(",\"").Append(name).Append("\":[");
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append('"').Append((values[i] ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"")).Append('"');
+            }
+            sb.Append(']');
         }
 
         private static void AppendInts(StringBuilder sb, string name, int[] values)

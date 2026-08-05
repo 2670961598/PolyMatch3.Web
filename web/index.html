@@ -48,6 +48,11 @@
   #log { width: 340px; height: 480px; overflow-y: auto; font-family: Consolas, monospace; font-size: 11.5px; background: #14151a; border-radius: 8px; padding: 8px; white-space: pre-wrap; }
   .ev-swap { color: #7ec8ff; } .ev-match { color: #c792ea; } .ev-elim { color: #ff7b72; }
   .ev-fall { color: #8fd18f; } .ev-spawn { color: #ffd166; } .ev-err { color: #ff5252; } .ev-log { color: #9aa0ad; } .ev-perf { color: #6ee7ff; } .ev-bomb { color: #ff9f45; font-weight: bold; }
+  .ev-score { color: #ffd166; font-weight: bold; } .ev-shuffle { color: #3fd6c8; font-weight: bold; }
+  fieldset { border: 1px solid #454958; border-radius: 8px; margin: 4px 0 8px; padding: 8px 10px; }
+  fieldset legend { font-size: 12px; color: #9aa0ad; padding: 0 4px; }
+  #hintBtn { background: #3f8f5f; }
+  #hintBtn:hover { background: #4daa70; }
 </style>
 </head>
 <body>
@@ -68,13 +73,52 @@
         <label style="display:flex;align-items:center;gap:4px"><input id="bombs" type="checkbox" style="width:auto" />传统三消（特殊棋子）</label>
         <button id="btnRandom">随机开局</button>
       </div>
+      <fieldset>
+        <legend>工具箱（缺省 = 经典行为）</legend>
+        <div class="row">
+          <label>拓扑</label><select id="topology">
+            <option value="rect">矩形（默认）</option>
+            <option value="torus">环面（首尾相接）</option>
+            <option value="mobius">莫比乌斯（翻转粘接）</option>
+          </select>
+          <label>重力</label><select id="gravity">
+            <option value="column">列重力（默认）</option>
+            <option value="field">势场重力</option>
+          </select>
+          <label>仲裁器</label><select id="arbiter">
+            <option value="">覆盖去重（默认）</option>
+            <option value="none">不去重</option>
+            <option value="containment">覆盖去重</option>
+            <option value="overlap">交叉去重</option>
+          </select>
+          <label>生成裁决</label><select id="spawnResolver">
+            <option value="">赢家通吃（默认）</option>
+            <option value="winner-take-all">赢家通吃</option>
+            <option value="both-apply">交叉都生效</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>炸弹范围</label><select id="bombRange">
+            <option value="">3×3（默认）</option>
+            <option value="radius:1">十字（BFS 半径 1）</option>
+            <option value="radius:2">半径 2</option>
+            <option value="line:row">整行</option>
+            <option value="line:col">整列</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:4px"><input id="scoreOn" type="checkbox" style="width:auto" />计分管道</label>
+          <label>步数预算</label><input id="moves" type="number" value="0" min="0" max="999" title="0 = 不限" />
+          <button id="hintBtn" type="button">提示一手</button>
+        </div>
+      </fieldset>
       <div class="row"><label style="width:100%">指定棋盘（逗号/空格分隔，0=空，行优先，长度=宽×高）：</label></div>
       <div class="row"><textarea id="pieces" placeholder="例如 64 个数字：1,2,3,..."></textarea></div>
       <div class="row"><button id="btnCustom">指定棋盘开局</button></div>
     </div>
     <div class="panel">
       <div class="row" style="justify-content:space-between">
-        <span>得分 <span id="score">0</span></span>
+        <span>消除 <span id="score">0</span></span>
+        <span>总分 <span id="points" style="font-size:22px;font-weight:bold;color:#3fd6c8">0</span></span>
+        <span>步数 <span id="movesLeft" style="font-weight:bold">—</span></span>
         <span id="wasmStatus" style="font-size:12px;color:#9aa0ad">WASM 加载中…</span>
       </div>
       <div id="perf" style="font-size:12px;color:#6ee7ff;min-height:16px;font-family:Consolas,monospace"></div>

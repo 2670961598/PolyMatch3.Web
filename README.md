@@ -74,10 +74,26 @@ python -m http.server 8080
 |---|---|
 | `NewGame(mode, w, h, colors, seed, bombs)` | 随机开局（纯种子随机，初始匹配原样保留，直接等玩家输入），返回棋盘 JSON |
 | `NewGameWithBoard(mode, w, h, colors, seed, csv, bombs)` | **指定棋盘开局**（正确性测试用），csv 为逗号分隔棋子值（0=空，行优先） |
+| `NewGameWithConfig(configJson)` | **工具箱开局**（演示面板入口）：拓扑/仲裁/生成裁决/炸弹范围/重力/计分/步数预算全部可选，缺省=经典行为（字段见 `src/PolyMatch3.Game/GameConfig.cs`） |
+| `GetHint()` | 提示一手：`{"a":12,"b":13}`，死局返回 `{}`（合法手枚举 + HintStrategy） |
 | `OfferSwap(a, b)` | 交换两格（cellId = y×width+x）；不相邻自动丢弃，无匹配自动弹回 |
-| `GetBoard()` | 权威棋盘快照 JSON（炸弹模式含 kinds 平行数组） |
+| `GetBoard()` | 权威棋盘快照 JSON（炸弹模式含 kinds 平行数组；另含 score=累计消除、points=结算总分、moves=剩余步数） |
 | `GetScore()` | 累计消除数 |
-| `onGameEvent(json)` | .NET → JS 推送：Swap / Match / Eliminate / Fall / Spawn / BombSpawn / Error / Log（含每步耗时，tag=Perf） |
+| `onGameEvent(json)` | .NET → JS 推送：Swap / Match / Eliminate / Fall / Spawn / BombSpawn / SpecialSpawn / Score / Shuffle / Error / Log（含每步耗时，tag=Perf） |
+
+### 工具箱面板（web/ 试玩页）
+
+开局表单下方"工具箱"区对应 8 组工具，全部可选、缺省为经典行为，配置在开局间记忆（localStorage）：
+
+- **拓扑**：矩形 / 环面（跨接缝可匹配）/ 莫比乌斯（翻转粘接）——`BoardBuilders`；
+- **重力**：列重力 / 势场重力（`FieldGravityStep`，汇点=底行，闭合拓扑的正确重力）；
+- **仲裁器**：不去重 / 覆盖去重 / 交叉去重（`IMatchArbiter` 注册表）；
+- **生成裁决**：赢家通吃 / 交叉都生效（`ISpawnResolver`，仅矩形+传统模式可见差别——埋个交叉四连试）；
+- **炸弹范围**：3×3 / 十字 / 半径 2 / 整行 / 整列（`ICellSelector` 注入炸弹）；
+- **计分管道**：插入 `ScoreStep`（演示修饰符：消除奖励 + 连锁乘算），事件流看 Score 明细，状态栏看总分；
+- **步数预算**：>0 时每次交换扣 1 点，用尽终局（行动配额演示）；
+- **提示一手**：`LegalMoveProbe` 枚举合法手 + `HintStrategy` 选一手高亮；
+- 死局闭环在小棋盘（≤256 格）自动开启：补充后检测无合法手 → 自动洗牌（`DeadlockCheckStep` + `ShuffleStep`）。
 
 ## 正确性测试姿势
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using PolyMatch3.Core;
 using PolyMatch3.Matcher;
 
@@ -54,6 +54,27 @@ namespace PolyMatch3.Game
                 case Hex: return CreateHexBoard(width, height);
                 default: throw new ArgumentOutOfRangeException(nameof(mode), mode, "未知棋盘模式（0=矩形 1=三角形 2=六边形）");
             }
+        }
+
+        /// <summary>
+        /// 带拓扑选择的开局（仅矩形模式有效）：rect（默认）/ torus（首尾相接）/ mobius（翻转粘接）。
+        /// 弯曲拓扑上重力不能再用"列"模型，调用方应配 FieldGravityStep（势场重力）。
+        /// </summary>
+        public static GraphBoard CreateBoard(int mode, int width, int height, string topology)
+        {
+            if (mode != Rect || string.IsNullOrEmpty(topology) || topology == "rect")
+                return CreateBoard(mode, width, height);
+
+            var reg = EdgeTypeRegistry.CreateRect();
+            var board = new GraphBoard(width, height, reg);
+            switch (topology)
+            {
+                case "torus": BoardBuilders.BuildTorusNeighbors(board); break;
+                case "mobius": BoardBuilders.BuildMobiusNeighbors(board); break;
+                default: throw new ArgumentException($"未知拓扑：\"{topology}\"（可用：rect / torus / mobius）", nameof(topology));
+            }
+            board.FreezeTopology();
+            return board;
         }
 
         public static Pattern[] CreatePatterns(int mode)

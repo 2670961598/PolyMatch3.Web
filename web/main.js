@@ -198,6 +198,17 @@ async function playEvent(ev) {
       break;
     }
 
+    case 'Score':
+      // 计分事件：日志面板展示明细，总分在批末快照校准时刷新
+      break;
+
+    case 'Shuffle':
+      // 全盘重排：动画降级，直接拿权威快照重绘
+      board = JSON.parse(api.GetBoard());
+      render();
+      await sleep(T(TIMING.fall));
+      break;
+
     default:
       break; // Log / Error 等只记日志
   }
@@ -348,6 +359,8 @@ function paintCells() {
     if (d) paintCell(d, board.cells[i], i);
   }
   $('score').textContent = board.score ?? 0;
+  $('points').textContent = board.points ?? 0;
+  $('movesLeft').textContent = board.moves ? board.moves : '—';
 }
 
 // 虚拟渲染：只保证视口（±2 格余量）内的格子存在且内容最新
@@ -382,6 +395,8 @@ function updateVirtual() {
     if (d && !keep.has(i)) { d.remove(); cellDivs[i] = null; }
   }
   $('score').textContent = board.score ?? 0;
+  $('points').textContent = board.points ?? 0;
+  $('movesLeft').textContent = board.moves ? board.moves : '—';
 }
 
 function onCellClick(i) {
@@ -408,17 +423,20 @@ function setStatus(text, busy) {
 
 function logEvent(ev) {
   const isPerf = ev.type === 'Log' && ev.tag === 'Perf';
-  const cls = isPerf ? 'ev-perf' : ({ Swap: 'ev-swap', Match: 'ev-match', Eliminate: 'ev-elim', Fall: 'ev-fall', Spawn: 'ev-spawn', BombSpawn: 'ev-bomb', SpecialSpawn: 'ev-bomb', Transform: 'ev-bomb', Error: 'ev-err', Log: 'ev-log' }[ev.type] || '');
+  const cls = isPerf ? 'ev-perf' : ({ Swap: 'ev-swap', Match: 'ev-match', Eliminate: 'ev-elim', Fall: 'ev-fall', Spawn: 'ev-spawn', BombSpawn: 'ev-bomb', SpecialSpawn: 'ev-bomb', Transform: 'ev-bomb', Score: 'ev-score', Shuffle: 'ev-shuffle', Error: 'ev-err', Log: 'ev-log' }[ev.type] || '');
   const line = document.createElement('div');
   line.className = cls;
   line.textContent = ev.type === 'Log'
     ? `[${ev.tag}] ${ev.message}`
-    : `#${ev.seq} [${ev.step}] ${ev.type} ${JSON.stringify(ev.cells)}` +
-      (ev.fromTo ? ` fromTo=${JSON.stringify(ev.fromTo)}` : '') +
-      (ev.pieces ? ` pieces=${JSON.stringify(ev.pieces)}` : '') +
-      (ev.priority !== undefined ? ` prio=${ev.priority}` : '') +
-      (ev.kind !== undefined ? ` kind=${ev.kind}` : '') +
-      (ev.message ? ` ${ev.message}` : '');
+    : ev.type === 'Score'
+      ? `#${ev.seq} [${ev.step}] Score +${ev.delta} → 总分 ${ev.total}` +
+        (ev.sources && ev.sources.length ? `（${ev.sources.map((s, i) => `${s} ${ev.deltas[i] >= 0 ? '+' : ''}${ev.deltas[i]}`).join('，')}）` : '')
+      : `#${ev.seq} [${ev.step}] ${ev.type} ${JSON.stringify(ev.cells)}` +
+        (ev.fromTo ? ` fromTo=${JSON.stringify(ev.fromTo)}` : '') +
+        (ev.pieces ? ` pieces=${JSON.stringify(ev.pieces)}` : '') +
+        (ev.priority !== undefined ? ` prio=${ev.priority}` : '') +
+        (ev.kind !== undefined ? ` kind=${ev.kind}` : '') +
+        (ev.message ? ` ${ev.message}` : '');
   const log = $('log');
   log.appendChild(line);
   while (log.childElementCount > LOG_MAX_LINES) log.removeChild(log.firstChild);
@@ -428,14 +446,52 @@ function logEvent(ev) {
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // ---------- 开局 ----------
-function newGame(custom) {
-  const mode = +$('mode').value;
-  const w = +$('w').value, h = +$('h').value, colors = +$('colors').value, seed = $('seed').value;
-  const bombs = $('bombs').checked ? 1 : 0;
+// 工具箱面板 → config JSON（NewGameWithConfig 的契约，缺省 = 经典行为）
+function collectConfig(custom) {
+  const cfg = {
+    mode: +$('mode').value,
+    width: +$('w').value, height: +$('h').value,
+    colors: +$('colors').value, seed: $('seed').value,
+    bombs: $('bombs').checked,
+    topology: $('topology').value,
+    gravity: $('gravity').value,
+    arbiter: $('arbiter').value,
+    spawnResolver: $('spawnResolver').value,
+    bombRange: $('bombRange').value,
+    score: $('scoreOn').checked,
+    moves: +$('moves').value,
+  };
+  if (custom) cfg.pieces = $('pieces').value;
+  return cfg;
+}
+
+function savePanel(cfg) { try { localStorage.setItem('toolbox', JSON.stringify(cfg)); } catch { } }
+
+function loadPanel() {
   try {
-    const json = custom
-      ? api.NewGameWithBoard(mode, w, h, colors, seed, $('pieces').value, bombs)
-      : api.NewGame(mode, w, h, colors, seed, bombs);
+    const cfg = JSON.parse(localStorage.getItem('toolbox'));
+    if (!cfg) return;
+    if (cfg.mode !== undefined) $('mode').value = cfg.mode;
+    if (cfg.width) $('w').value = cfg.width;
+    if (cfg.height) $('h').value = cfg.height;
+    if (cfg.colors) $('colors').value = cfg.colors;
+    if (cfg.seed !== undefined) $('seed').value = cfg.seed;
+    $('bombs').checked = !!cfg.bombs;
+    if (cfg.topology) $('topology').value = cfg.topology;
+    if (cfg.gravity) $('gravity').value = cfg.gravity;
+    if (cfg.arbiter !== undefined) $('arbiter').value = cfg.arbiter;
+    if (cfg.spawnResolver !== undefined) $('spawnResolver').value = cfg.spawnResolver;
+    if (cfg.bombRange !== undefined) $('bombRange').value = cfg.bombRange;
+    $('scoreOn').checked = !!cfg.score;
+    if (cfg.moves !== undefined) $('moves').value = cfg.moves;
+  } catch { }
+}
+
+function newGame(custom) {
+  try {
+    const cfg = collectConfig(custom);
+    savePanel(cfg);
+    const json = api.NewGameWithConfig(JSON.stringify(cfg));
     board = JSON.parse(json);
     selected = -1;
     eventQueue = [];
@@ -451,6 +507,20 @@ function newGame(custom) {
   }
 }
 
+// 提示一手：高亮逻辑层选出的两格
+async function hint() {
+  if (!board || pumping || !board.waiting) return;
+  try {
+    const h = JSON.parse(api.GetHint());
+    if (h.a === undefined) { setStatus('死局：没有合法手（等自动洗牌或重开）', true); return; }
+    highlight.add(h.a); highlight.add(h.b);
+    repaint();
+    await sleep(1200);
+    highlight.delete(h.a); highlight.delete(h.b);
+    repaint();
+  } catch (e) { setStatus('提示失败：' + e, true); }
+}
+
 // ---------- 启动 ----------
 async function boot() {
   try {
@@ -459,8 +529,10 @@ async function boot() {
     const exports = await getAssemblyExports(getConfig().mainAssemblyName);
     api = exports.PolyMatch3.Bridge.GameBridge;
     $('wasmStatus').textContent = 'WASM 就绪';
+    loadPanel();
     $('btnRandom').onclick = () => newGame(false);
     $('btnCustom').onclick = () => newGame(true);
+    $('hintBtn').onclick = () => hint();
     newGame(false);
   } catch (e) {
     $('wasmStatus').textContent = '加载失败：' + e;

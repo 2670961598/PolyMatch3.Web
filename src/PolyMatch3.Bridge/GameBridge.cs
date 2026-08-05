@@ -64,6 +64,28 @@ namespace PolyMatch3.Bridge
             return _session.BoardJson();
         }
 
+        /// <summary>
+        /// 工具箱开局（演示面板入口）：configJson 见 GameConfig——拓扑/仲裁/生成裁决/炸弹范围/
+        /// 重力/计分/步数预算全部可选，缺省 = 现状行为。返回棋盘 JSON。
+        /// </summary>
+        [JSExport]
+        public static string NewGameWithConfig(string configJson)
+        {
+            EnsureLogSink();
+            _session = GameSession.Create(GameConfig.Parse(configJson));
+            _session.OnEventJson = PushEvent;
+            _session.OnError = PushError;
+            return _session.BoardJson();
+        }
+
+        /// <summary>提示一手：{"a":12,"b":13}；无合法手（死局）返回 {}。仅等输入时有效。</summary>
+        [JSExport]
+        public static string GetHint()
+        {
+            var hint = _session?.GetHint();
+            return hint.HasValue ? "{\"a\":" + hint.Value.a + ",\"b\":" + hint.Value.b + "}" : "{}";
+        }
+
         /// <summary>玩家交换两格（非法输入逻辑层自动丢弃）。</summary>
         [JSExport]
         public static void OfferSwap(int a, int b)
