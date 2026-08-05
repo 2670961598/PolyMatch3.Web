@@ -5,6 +5,8 @@
     <LangVersion>9</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>PolyMatch3.Defs</RootNamespace>
+    <Description>数据定义层（从 Unity 工程复制，纯 C# 零 Unity 依赖）：关卡/棋盘/图案/棋子 JSON 定义 + 声明式 Step 图编排</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,10 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\\PolyMatch3\\PolyMatch3.csproj" />
-    <ProjectReference Include="..\\PolyMatch3.Tools\\PolyMatch3.Tools.csproj" />
-    <ProjectReference Include="..\\PolyMatch3.Samples\\PolyMatch3.Samples.csproj" />
-    <ProjectReference Include="..\\PolyMatch3.Defs\\PolyMatch3.Defs.csproj" />
+    <ProjectReference Include="..\PolyMatch3\PolyMatch3.csproj" />
+    <ProjectReference Include="..\PolyMatch3.Tools\PolyMatch3.Tools.csproj" />
   </ItemGroup>
 
 </Project>

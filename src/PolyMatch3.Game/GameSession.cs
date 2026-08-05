@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using PolyMatch3.Core;
+using PolyMatch3.Defs;
 using PolyMatch3.Diagnostics;
 using PolyMatch3.Matcher;
 using PolyMatch3.Step;
@@ -104,8 +105,6 @@ namespace PolyMatch3.Game
 
             var ctx = new StepContext(rng);
             var input = new InputChannel<(int a, int b)>();
-            // 死局闭环只在小棋盘开启（大棋盘试交换探测太贵）
-            bool deadlockShuffle = board.CellCount <= 256;
 
             // 传统三消模式（完整特殊子交互矩阵，仅矩形）：走 Samples.Classic 的 ClassicGameManager
             if (cfg.Bombs && cfg.Mode == BoardModes.Rect)
@@ -123,12 +122,28 @@ namespace PolyMatch3.Game
             }
 
             var kinds = cfg.Bombs ? new Samples.KindLayer(board.CellCount) : null;
-            var manager = new ClassicStepManager(input, matcher, colorCount, cfg.Width, cfg.Height, registry,
-                cfg.Bombs, kinds,
-                cfg.BuildArbiter(), cfg.BuildSelector(), cfg.Gravity == "field",
-                cfg.BuildScoreModifiers(), cfg.Moves, deadlockShuffle);
-            var session = new GameSession(board, ctx, input, manager, cfg.Mode, kinds, matcher);
-            session.StartRun(manager);
+            // 声明式图编排：GameConfig → StepGraphDef → GraphStepManager（原手写 ClassicStepManager 的等价图，
+            // 工具箱面板的每个开关 = 图里的节点/参数，见 GraphBuilder）
+            var graph = GraphBuilder.Build(cfg, cfg.Bombs);
+            var catalog = GraphCatalog.Create(kinds, cfg.BuildSelector());
+            var buildCtx = new StepBuildContext
+            {
+                Board = board,
+                Matcher = matcher,
+                Pieces = registry,
+                Input = input,
+                Colors = colorCount,
+            };
+            var graphManager = new GraphStepManager(graph, catalog, buildCtx);
+            bool WaitForAnyInput()
+            {
+                foreach (var kv in graphManager.NodeSteps)
+                    if (kv.Value is PlayerSwapStep ps && ps.WaitingForInput) return true;
+                return false;
+            }
+            var session = new GameSession(board, ctx, input, null, cfg.Mode, kinds, matcher,
+                null, WaitForAnyInput);
+            session.StartRun(graphManager);
             return session;
         }
 
