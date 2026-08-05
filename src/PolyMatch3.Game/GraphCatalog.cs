@@ -9,7 +9,8 @@ namespace PolyMatch3.Game
     /// <summary>
     /// 【导读】Web 侧图编排的 Step catalog 引导：内置 Tools Step（CreateDefault：match/arbitrate/
     /// eliminate/gravity/fieldGravity/refill/score/beginTurn/spendAp/deadlockCheck/shuffle/count/swap）+
-    /// 本层注册的输入/炸弹 Step。kinds != null（炸弹模式）时全部 bomb 系节点共享同一 KindLayer。
+    /// 本层注册的输入/炸弹 Step。kinds != null（炸弹模式）时全部 bomb 系节点共享同一 KindLayer，
+    /// 且 shuffle 走双层同步的 KindShuffleStep（单层洗牌会把 kind 层洗错位）。
     /// </summary>
     public static class GraphCatalog
     {
@@ -30,6 +31,9 @@ namespace PolyMatch3.Game
                 catalog.Register("kindGravity", (ctx, p) => new KindGravityStep(
                     kinds, ctx.Board.CellCount,
                     PathGravityStep.BuildColumnEdges(ctx.Board.Width, ctx.Board.Height)));
+                // 炸弹模式的洗牌必须双层同步（单层会把 kind 洗错位）——用专属 key
+                catalog.Register("kindShuffle", (ctx, p) => new KindShuffleStep(
+                    kinds, ctx.Matcher, p?.Value<int?>("maxAttempts") ?? 32));
             }
             return catalog;
         }

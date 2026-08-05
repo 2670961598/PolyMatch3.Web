@@ -46,7 +46,7 @@ namespace PolyMatch3.Game
 
             // ---- 连锁段 ----
             bool deadlock = cfg.Width * cfg.Height <= 256; // 大棋盘死局探测太贵（与原装配一致，炸弹模式同样开启）
-            if (deadlock) { Node("dead", "deadlockCheck"); Node("shuf", "shuffle"); }
+            if (deadlock) { Node("dead", "deadlockCheck"); Node("shuf", bombs ? "kindShuffle" : "shuffle"); }
             Node("matchChain", "match", new JObject { ["arbitrate"] = false });
             Node("arbChain", "arbitrate", new JObject { ["arbiter"] = string.IsNullOrEmpty(cfg.Arbiter) ? "containment" : cfg.Arbiter });
 
