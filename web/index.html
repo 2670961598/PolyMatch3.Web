@@ -53,6 +53,16 @@
   fieldset legend { font-size: 12px; color: #9aa0ad; padding: 0 4px; }
   #hintBtn { background: #3f8f5f; }
   #hintBtn:hover { background: #4daa70; }
+  /* 移动端：竖向堆叠、棋盘撑满屏宽（正方形自适应）、日志压低 */
+  @media (max-width: 720px) {
+    .wrap { flex-direction: column; padding: 10px; gap: 12px; }
+    .panel { width: 100% !important; padding: 12px; }
+    #phaser-board { width: 100% !important; height: auto !important; aspect-ratio: 1 / 1; }
+    #log { width: 100% !important; height: 180px; }
+    input, select, button { padding: 8px 10px; }
+    input { width: 56px; }
+    input.wide { width: 100px; }
+  }
 </style>
 </head>
 <body>
@@ -120,9 +130,10 @@
         <span>总分 <span id="points" style="font-size:22px;font-weight:bold;color:#3fd6c8">0</span></span>
         <span>步数 <span id="movesLeft" style="font-weight:bold">—</span></span>
         <span id="wasmStatus" style="font-size:12px;color:#9aa0ad">WASM 加载中…</span>
+        <span style="font-size:12px;color:#3fd6c8">渲染: Phaser 3.80</span>
       </div>
       <div id="perf" style="font-size:12px;color:#6ee7ff;min-height:16px;font-family:Consolas,monospace"></div>
-      <div id="board"></div>
+      <div id="phaser-board" style="width:480px;height:520px;border-radius:10px;overflow:hidden"></div>
       <div id="status">…</div>
     </div>
   </div>
@@ -131,6 +142,7 @@
     <div id="log"></div>
   </div>
 </div>
+<script src="./lib/phaser.min.js"></script>
 <script type="module" src="./main.js"></script>
 </body>
 </html>

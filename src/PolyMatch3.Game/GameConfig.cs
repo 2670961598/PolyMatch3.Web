@@ -1,11 +1,21 @@
 using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using PolyMatch3.Core;
 using PolyMatch3.Matcher;
 using PolyMatch3.Tools;
 
 namespace PolyMatch3.Game
 {
+    /// <summary>
+    /// GameConfig 的源生成序列化上下文：WASM 裁剪/AOT 下反射式 JsonSerializer 被禁用
+    /// （JsonSerializerIsReflectionDisabled），必须走源生成。
+    /// </summary>
+    [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+    [JsonSerializable(typeof(GameConfig))]
+    public partial class GameConfigJsonContext : JsonSerializerContext
+    {
+    }
     /// <summary>
     /// 【导读】开局配置（工具箱面板的 JSON 契约）：全部字段可选，缺省 = 现状行为。
     /// Bridge 的 NewGameWithConfig 解析本类后交给 GameSession.Create 装配——
@@ -39,12 +49,11 @@ namespace PolyMatch3.Game
         /// <summary>&gt;0 = 步数预算（行动配额演示，turn.ap），用尽即终局；0 = 不限。</summary>
         public int Moves { get; set; }
 
-        /// <summary>解析 JSON（大小写不敏感）。空/ null 给全默认。</summary>
+        /// <summary>解析 JSON（大小写不敏感，源生成上下文——WASM 下反射式序列化不可用）。空/ null 给全默认。</summary>
         public static GameConfig Parse(string json)
         {
             if (string.IsNullOrWhiteSpace(json)) return new GameConfig();
-            var cfg = JsonSerializer.Deserialize<GameConfig>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var cfg = JsonSerializer.Deserialize(json, GameConfigJsonContext.Default.GameConfig);
             if (cfg == null) throw new ArgumentException("配置 JSON 解析失败", nameof(json));
             return cfg;
         }

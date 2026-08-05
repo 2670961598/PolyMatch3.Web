@@ -6,6 +6,7 @@ namespace PolyMatch3.Samples.Classic
     /// <summary>
     /// 特殊棋子种类（kind 平行数组的值，0=普通）。
     /// 四连=线弹（分方向）、十字/T字=星弹、五连=宝石。
+    /// T字 = 足五格（横竖各三共一交点，长腿方向 2 步）；短腿 T（十字缺一角，4 格）不匹配，降级为三连。
     /// </summary>
     public static class SpecialKind
     {
@@ -45,10 +46,10 @@ namespace PolyMatch3.Samples.Classic
                 new Pattern("十字", 95,
                     new[] { (U, 1), (D, 1), (L, 1), (R, 1) }),
                 new Pattern("T字", 90,
-                    new[] { (U, 1), (L, 1), (R, 1) },
-                    new[] { (D, 1), (L, 1), (R, 1) },
-                    new[] { (L, 1), (U, 1), (D, 1) },
-                    new[] { (R, 1), (U, 1), (D, 1) }),
+                    new[] { (L, 1), (R, 1), (D, 2) },   // 横三 + 下长腿（足五格）
+                    new[] { (L, 1), (R, 1), (U, 2) },   // 横三 + 上长腿
+                    new[] { (U, 1), (D, 1), (L, 2) },   // 竖三 + 左长腿
+                    new[] { (U, 1), (D, 1), (R, 2) }),  // 竖三 + 右长腿
                 new Pattern("四连", 80,
                     new[] { (U, 1), (D, 2) },   // 变体0：竖线
                     new[] { (D, 1), (U, 2) },   // 变体1：竖线

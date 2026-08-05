@@ -18,3 +18,4 @@ app/android/app/build/
 .vscode/
 *.user
 Thumbs.db
+server-*.log

@@ -6,6 +6,7 @@ $appBundle = Join-Path $root 'src\PolyMatch3.Bridge\bin\Release\net9.0\browser-w
 dotnet publish (Join-Path $root 'src\PolyMatch3.Bridge\PolyMatch3.Bridge.csproj') -c Release --nologo
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Copy-Item (Join-Path $root 'web\index.html'), (Join-Path $root 'web\main.js'), (Join-Path $root 'web\manifest.json'), (Join-Path $root 'web\sw.js'), (Join-Path $root 'web\icon-192.png'), (Join-Path $root 'web\icon-512.png') $appBundle -Force
+Copy-Item (Join-Path $root 'web\index.html'), (Join-Path $root 'web\main.js'), (Join-Path $root 'web\board-renderer.js'), (Join-Path $root 'web\manifest.json'), (Join-Path $root 'web\sw.js'), (Join-Path $root 'web\icon-192.png'), (Join-Path $root 'web\icon-512.png') $appBundle -Force
+Copy-Item (Join-Path $root 'web\lib') $appBundle -Recurse -Force
 Write-Host "`n发布完成：$appBundle"
 Write-Host "试玩：cd `"$appBundle`"; python -m http.server 8080  →  http://localhost:8080"
